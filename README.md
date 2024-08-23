@@ -1,126 +1,182 @@
-# AWS Billing Alert Terraform Module
+# 🚀 AWS Billing Alert Terraform Module
 
 ![AWS-billing](https://imgur.com/5DqRw6F.png)
 
-This repository contains a Terraform module that helps set up AWS billing alerts. Once configured, it will notify users when AWS charges exceed the specified amounts.
+Welcome to the **AWS Billing Alert Terraform module!** This module helps you set up automatic billing alerts for your AWS account. Once configured, you'll receive notifications when your AWS charges exceed specified amounts, helping you stay on top of your costs. 💰
 
-## Prerequisites
-- Terraform installed on your local machine.
-- An AWS account.
-- AWS CLI configured with necessary credentials.
+## 🛠️ Prerequisites
 
-## Understanding the AWS Services
+> [!IMPORTANT]
+> Before you begin, make sure you have the following:
+>
+> - 🧰 **Terraform (v1.5.0 or later)** installed on your local machine.
+> - 🌐 **An AWS account** with appropriate permissions.
+> - 🔑 **AWS CLI** configured with the necessary credentials.
 
-### AWS CloudWatch
+## 🔍 Understanding the AWS Services
 
-[AWS CloudWatch](https://aws.amazon.com/cloudwatch/) is a monitoring and observability service. With CloudWatch, you can collect and access all your performance and operational data in form of logs and metrics from a single platform. This module uses CloudWatch to monitor your AWS billing and trigger an alarm when the specified thresholds are crossed.
+> [!NOTE]
+>
+> ### 🌟 AWS CloudWatch
+>
+> [AWS CloudWatch](https://aws.amazon.com/cloudwatch/) is a monitoring and observability service that collects and tracks metrics, collects and monitors log files, and sets alarms. This module uses CloudWatch to monitor your AWS billing and trigger an alarm when specified thresholds are exceeded.
+>
+> ### 📢 AWS SNS (Simple Notification Service)
+>
+> [AWS SNS](https://aws.amazon.com/sns/) is a fully managed messaging service. It allows you to send notifications to multiple subscribers. In this module, SNS is used to send billing alerts via email, SMS, or other supported channels when the CloudWatch alarm is triggered.
+>
+> ### 🧾 AWS Billing
+>
+> [AWS Billing](https://aws.amazon.com/aws-cost-management/aws-bill/) provides tools to manage your AWS costs and budget. This module automates the monitoring of your AWS billing, so you're notified before your bill goes beyond your expectations.
 
-### AWS SNS (Simple Notification Service)
+## 📦 Setup Instructions
 
-[AWS SNS](https://aws.amazon.com/sns/) is a fully managed notification service. It allows you to send individual messages or to fan-out messages to large numbers of recipients. In the context of this module, SNS is used to send out notifications when the billing alarm in CloudWatch is triggered.
+### 1️⃣ Clone the Repository
 
-### AWS Billing
-
-[AWS Billing](https://aws.amazon.com/aws-cost-management/aws-bill/) provides you with tools and features to pay for what you use, manage your costs, and budget your AWS costs. AWS charges can accumulate quickly depending on the services and the usage, hence monitoring the billing is crucial. This module helps in automating the monitoring process and alerts you before your bill goes beyond your expectations.
-
-
-
-## Setup
-1. **Clone the Repository**
-
-   ### Clone Repository
-
-You can clone this repository to your local machine using the following steps:
+Let's start by getting the code onto your machine.
 
 1. Open your terminal or command prompt.
+2. Navigate to the directory where you'd like to place the project:
 
-2. Navigate to the directory where you want to clone the repository:
-
-   ```
+   ```bash
    cd /path/to/your/directory
    ```
-- Replace /path/to/your/directory with the actual path to your desired directory.
 
-- Clone the repository by running the following command:
+3. Clone the repository with the following command:
 
+   ```bash
+   git clone https://github.com/NotHarshhaa/aws-billing-alert-terraform.git
+   ```
 
+4. Move into the directory:
 
+   ```bash
+   cd aws-billing-alert-terraform
+   ```
+
+### 2️⃣ Install Terraform (If Not Already Installed)
+
+If you don’t have Terraform installed yet, follow these steps for Amazon Linux:
+
+1. **Install necessary packages**:
+
+   ```bash
+   sudo yum install -y yum-utils shadow-utils
+   ```
+
+2. **Add the HashiCorp repository**:
+
+   ```bash
+   sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+   ```
+
+3. **Install Terraform**:
+
+   ```bash
+   sudo yum -y install terraform
+   ```
+
+4. **Verify the installation**:
+
+   ```bash
+   terraform --version
+   ```
+
+### 3️⃣ Initialize Terraform
+
+Now, let's prepare Terraform to work with the module.
+
+1. In the terminal, navigate to the directory where the repository was cloned.
+2. Run the following command to initialize the module:
+
+   ```bash
+   terraform init
+   ```
+
+   This will download the necessary providers and set up your environment.
+
+### 4️⃣ Configure Billing Alerts
+
+By default, this module is set up to alert you when your AWS bill exceeds `$100` and `$120`. If you'd like to change these thresholds:
+
+1. Open the `alert.tf` file in a text editor.
+2. Modify the `thresholds` variable:
+
+   ```hcl
+   variable "thresholds" {
+     description = "Billing thresholds for alerts"
+     type        = list(number)
+     default     = [100, 120]  # Update these values to your preference
+   }
+   ```
+
+### 5️⃣ Apply the Terraform Configuration
+
+Once everything is set up, apply the configuration to create the alerts:
+
+```bash
+terraform apply
 ```
-git clone https://github.com/NotHarshhaa/aws-billing-alert-terraform.git
-```
-This will create a copy of the repository on your local machine.
 
-Change your working directory to the cloned repository:
+You'll be presented with a plan that shows the resources Terraform will create. If everything looks good, type `yes` to proceed.
 
-```
-cd aws-billing-alert-terraform
-```
-Now you have successfully cloned the repository to your local machine and can start working with it.
+### 6️⃣ Verify Your Alerts
 
-**Note:** Ensure that you have Git installed on your machine before running the git clone command.
+After Terraform finishes, check your AWS Management Console to verify that the CloudWatch alarms and SNS topics have been created. You'll start receiving alerts according to the thresholds you set.
 
-- Replace `/path/to/your/directory`
+## 🔧 Customization
 
-# Terraform Installation Guide for Amazon Linux
+You can customize the alert thresholds in the `alert.tf` file. By default, the alerts are set at `$100` and `$120`, but you can modify these values to fit your needs.
 
-This guide will walk you through the installation of Terraform on an Amazon Linux system using `yum`. Terraform is an infrastructure as code tool that allows you to define and provision infrastructure resources in a declarative configuration file.
+## 📬 Setting Up Notifications
 
-## Prerequisites
+Make sure to update the email address in `alert.tf` to receive notifications:
 
-Before you begin, make sure you have the following prerequisites:
-- An Amazon Linux system.
-- `sudo` or root access to your server.
-
-## Installation Steps
-
-Follow these steps to install Terraform on your Amazon Linux system:
-
-```
-# Install necessary packages
-sudo yum install -y yum-utils shadow-utils
-
-# Add HashiCorp repository for Amazon Linux
-sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-
-# Install Terraform
-sudo yum -y install terraform
-
+```hcl
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.billing_alert.arn
+  protocol  = "email"
+  endpoint  = "your-email@example.com" # Replace with your email
+}
 ```
 
-After the installation is complete, you can verify the installation by checking the Terraform version:
+## 📝 Example Usage
 
-```
-terraform --version
+Here’s a simple example to get started:
 
-```
-
-
-2. **Initialize Terraform**
-
-   Navigate to the directory where you've cloned the repository and run:
-
-```
-terraform init
+```hcl
+module "billing_alert" {
+  source  = "github.com/NotHarshhaa/aws-billing-alert-terraform"
+  
+  # Customize your billing threshold
+  threshold_1 = 150
+  threshold_2 = 200
+}
 ```
 
-3. **Apply the Terraform Configuration**
+> [!TIP]
+>
+> - Always keep your `.tfvars` files out of version control to avoid exposing sensitive information.
+> - Use the `.terraform.lock.hcl` file to maintain consistent provider versions across your environments.
 
-After initializing, apply the Terraform configuration:
+## 🎯 Usage
 
-```
-terraform apply 
-```
+This module is designed to be flexible. You can adjust the billing thresholds, notification endpoints, and other settings to suit your needs. Just make sure to update the `alert.tf` file accordingly and reapply the configuration with `terraform apply`.
 
-Review the plan, and if everything looks good, proceed by typing `yes`.
+## 🙌 Feedback and Contributions
 
-## Usage
-Modify the Terraform configuration as needed to fit your requirements. **By default, alerts are set at $100 and $120, but you can adjust these values in the main Terraform file.**
+> [!TIP]
+>
+> _We'd love to hear your thoughts! Whether it's feedback, bug reports, or pull requests, feel free to get involved. Your contributions help make this module better for everyone._
 
-## Feedback and Contributions
-Feedback, bug reports, and pull requests are welcomed. Feel free to raise an issue or submit a pull request.
+## ⭐ Hit the Star
 
+> [!IMPORTANT]
+> _If you find this repository helpful for learning or in practice, **please hit the star button on GitHub.** ⭐ It helps others find this resource too!_
 
-# Hit the Star! ⭐
-***If you are planning to use this repo for learning, please hit the star. Thanks!***
+### 👤 Author
 
-#### Author by [Harshhaa Reddy](https://github.com/NotHarshhaa)
+![banner](https://imgur.com/m1yp6yK.gif)
+
+> [!TIP]
+> **Join Our [Telegram Community](https://t.me/prodevopsguy) || [Follow me on GitHub](https://github.com/NotHarshhaa) for more DevOps content!**
