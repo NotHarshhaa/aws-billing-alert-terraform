@@ -173,7 +173,7 @@ This module is flexible and supports dynamic region, currency, and threshold con
 
 ### 👤 Author
 
-![banner](https://imgur.com/m1yp6yK.gif)
+![banner](https://imgur.com/2j7GSPs.png)
 
 > [!TIP]
 > **Join Our [Telegram Community](https://t.me/prodevopsguy) || [Follow me on GitHub](https://github.com/NotHarshhaa) for more DevOps content!**
