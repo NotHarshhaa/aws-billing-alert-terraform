@@ -21,10 +21,10 @@ variable "alert_thresholds" {
   default     = [100, 120] # Default thresholds in USD
 }
 
-variable "email_endpoint" {
-  description = "The email address to receive billing alerts"
-  type        = string
-  default     = "your-email@example.com" # Replace with your email
+variable "email_endpoints" {
+  description = "List of email addresses to receive billing alerts"
+  type        = list(string)
+  default     = ["your-email@example.com"] # Replace with actual emails
 }
 
 variable "currency" {
@@ -45,7 +45,7 @@ variable "auto_confirm_subscription" {
   default     = false
 }
 
-# Create the SNS Topic
+# SNS Topic for Billing Alerts
 resource "aws_sns_topic" "billing_alert" {
   name = var.sns_topic_name
   tags = {
@@ -54,7 +54,18 @@ resource "aws_sns_topic" "billing_alert" {
   }
 }
 
-# Loop through the thresholds to create multiple alarms
+# SNS Dead-Letter Queue (DLQ) for failed notifications
+resource "aws_sqs_queue" "sns_dlq" {
+  name = "${var.sns_topic_name}-dlq"
+}
+
+resource "aws_sns_topic_subscription" "sns_dlq_subscription" {
+  topic_arn = aws_sns_topic.billing_alert.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.sns_dlq.arn
+}
+
+# CloudWatch Billing Alarms (Per-Service and Total)
 resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   count               = length(var.alert_thresholds)
   alarm_name          = "estimated-charges-${var.alert_thresholds[count.index]}"
@@ -65,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   period              = "86400" # 24 hours in seconds
   statistic           = "Maximum"
   threshold           = var.alert_thresholds[count.index]
-  alarm_description   = "Alarm when AWS charges go above ${var.alert_thresholds[count.index]} ${var.currency}"
+  alarm_description   = "Alarm when AWS charges exceed ${var.alert_thresholds[count.index]} ${var.currency}"
   alarm_actions       = [aws_sns_topic.billing_alert.arn]
   treat_missing_data  = "notBreaching"
   dimensions = {
@@ -77,22 +88,39 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   }
 }
 
-# Add email subscription to SNS topic
-resource "aws_sns_topic_subscription" "email_alert" {
-  topic_arn = aws_sns_topic.billing_alert.arn
-  protocol  = "email"
-  endpoint  = var.email_endpoint
-
-  # Automatically confirm subscription if enabled
-  depends_on = [aws_sns_topic.billing_alert]
-  provisioner "local-exec" {
-    when    = "create"
-    command = "echo 'Auto-confirm subscription is enabled.'"
-    interpreter = ["/bin/bash"]
+# Billing Alerts per AWS Service
+resource "aws_cloudwatch_metric_alarm" "service_billing_alert" {
+  count               = length(var.alert_thresholds)
+  alarm_name          = "service-billing-alert-${var.alert_thresholds[count.index]}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "EstimatedCharges"
+  namespace           = "AWS/Billing"
+  period              = "86400"
+  statistic           = "Maximum"
+  threshold           = var.alert_thresholds[count.index]
+  alarm_description   = "Alarm when AWS service-specific charges exceed ${var.alert_thresholds[count.index]} ${var.currency}"
+  alarm_actions       = [aws_sns_topic.billing_alert.arn]
+  treat_missing_data  = "notBreaching"
+  dimensions = {
+    ServiceName = "AmazonEC2"
+    Currency    = var.currency
+  }
+  tags = {
+    Environment = var.environment_tag
+    Purpose     = "BillingAlerts"
   }
 }
 
-# Add a CloudWatch log metric filter for billing logs
+# Add multiple email subscriptions to SNS topic
+resource "aws_sns_topic_subscription" "email_alerts" {
+  count     = length(var.email_endpoints)
+  topic_arn = aws_sns_topic.billing_alert.arn
+  protocol  = "email"
+  endpoint  = var.email_endpoints[count.index]
+}
+
+# CloudWatch Log Metric Filter for Billing Logs
 resource "aws_cloudwatch_log_metric_filter" "billing_logs" {
   name           = "EstimatedChargesFilter"
   log_group_name = "/aws/billing"
@@ -113,4 +141,9 @@ output "sns_topic_arn" {
 output "cloudwatch_alarm_names" {
   description = "List of CloudWatch alarm names"
   value       = [for alarm in aws_cloudwatch_metric_alarm.estimated_charges : alarm.alarm_name]
+}
+
+output "sns_dlq_arn" {
+  description = "The ARN of the SNS dead-letter queue"
+  value       = aws_sqs_queue.sns_dlq.arn
 }
