@@ -1,6 +1,6 @@
 # 🚀 AWS Billing Alert Terraform Module  
 
-![AWS-billing](https://imgur.com/5DqRw6F.png)  
+![AWS-billing](https://imgur.com/wtaBi16.png)  
 
 Welcome to the **AWS Billing Alert Terraform module!** This module helps you set up automatic billing alerts for your AWS account. Once configured, you'll receive notifications when your AWS charges exceed specified amounts, helping you stay on top of your costs. 💰  
 
@@ -8,9 +8,9 @@ Welcome to the **AWS Billing Alert Terraform module!** This module helps you set
 
 ## 🛠️ Prerequisites  
 
-> **[!IMPORTANT]**  
-> Before you begin, make sure you have the following:  
->  
+> [!IMPORTANT]
+> **Before you begin, make sure you have the following:**  
+>
 > - 🧰 **Terraform (v1.5.0 or later)** installed on your local machine.  
 > - 🌐 **An AWS account** with appropriate permissions.  
 > - 🔑 **AWS CLI** configured with the necessary credentials.  
@@ -30,6 +30,16 @@ Welcome to the **AWS Billing Alert Terraform module!** This module helps you set
 ### 🧾 AWS Billing  
 
 [AWS Billing](https://aws.amazon.com/aws-cost-management/aws-bill/) provides tools to manage your AWS costs and budget. This module automates the monitoring of your AWS billing, so you're notified before your bill goes beyond your expectations.  
+
+---
+
+## 🚀 New Features & Improvements [07-03-2025]
+
+✅ **Multiple Email Alerts** – Supports multiple recipients by allowing a list of emails.  
+✅ **SNS Dead-Letter Queue (DLQ)** – Ensures failed notifications are retried.  
+✅ **Per-Service Billing Alerts** – Monitors spending on individual AWS services like EC2, S3, etc.  
+✅ **Enhanced CloudWatch Filters** – Improved billing log monitoring for better cost visibility.  
+✅ **CloudWatch Dashboard** – Provides an overview of billing trends and cost insights.  
 
 ---
 
@@ -85,10 +95,14 @@ terraform init
 
 #### Update Configuration Variables:  
 
-With the recent changes, you can now:  
+With the recent changes, you can now: 
+
 - Set custom **AWS regions** using `aws_region`.  
 - Configure **currencies** for billing alerts.  
 - Automatically confirm **email subscriptions** for ease of setup during testing.  
+- Configure **per-service billing alerts** to track costs for specific AWS services.  
+- Enable **SNS DLQ** for better message reliability.  
+- Visualize billing trends via the **CloudWatch Dashboard**.  
 
 Update the `terraform.tfvars` file with your settings:  
 
@@ -96,7 +110,7 @@ Update the `terraform.tfvars` file with your settings:
 aws_region            = "us-east-1"  
 alert_thresholds      = [100, 150, 200]  
 currency              = "USD"  
-email_endpoint        = "your-email@example.com"  
+email_endpoints       = ["your-email@example.com", "team@example.com"]  
 auto_confirm_subscription = true  
 ```  
 
@@ -126,14 +140,14 @@ For testing purposes, you can enable automatic email confirmation by setting:
 auto_confirm_subscription = true  
 ```  
 
-> [!IMPORTANT]
+> [!IMPORTANT]  
 > **Use this option only in test environments with proper permissions.**  
 
 ---
 
 ## 📬 Notifications  
 
-This module supports email alerts via **AWS SNS**. Update the `email_endpoint` variable with your preferred email address to receive billing notifications.  
+This module supports email alerts via **AWS SNS**. Update the `email_endpoints` variable with your preferred email addresses to receive billing notifications.  
 
 ---
 
@@ -146,7 +160,7 @@ module "billing_alert" {
   source                     = "github.com/NotHarshhaa/aws-billing-alert-terraform"  
   aws_region                 = "us-west-2"  
   alert_thresholds           = [100, 150, 200]  
-  email_endpoint             = "my-email@example.com"  
+  email_endpoints            = ["my-email@example.com", "finance@example.com"]  
   auto_confirm_subscription  = true  
   currency                   = "USD"  
 }  
@@ -162,18 +176,17 @@ This module is flexible and supports dynamic region, currency, and threshold con
 
 ## 🙌 Feedback and Contributions
 
-> [!TIP]
->
+> [!TIP]  
 > _We'd love to hear your thoughts! Whether it's feedback, bug reports, or pull requests, feel free to get involved. Your contributions help make this module better for everyone._
 
-## ⭐ Hit the Star
+## ⭐ Hit the Star  
 
-> [!IMPORTANT]
+> [!IMPORTANT]  
 > _If you find this repository helpful for learning or in practice, **please hit the star button on GitHub.** ⭐ It helps others find this resource too!_
 
-### 👤 Author
+### 👤 Author  
 
 ![banner](https://imgur.com/2j7GSPs.png)
 
-> [!TIP]
+> [!TIP]  
 > **Join Our [Telegram Community](https://t.me/prodevopsguy) || [Follow me on GitHub](https://github.com/NotHarshhaa) for more DevOps content!**
