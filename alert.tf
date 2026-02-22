@@ -48,10 +48,39 @@ variable "auto_confirm_subscription" {
 # SNS Topic for Billing Alerts
 resource "aws_sns_topic" "billing_alert" {
   name = var.sns_topic_name
+  
   tags = {
     Environment = var.environment_tag
     Purpose     = "BillingAlerts"
   }
+}
+
+# SNS Topic Policy to allow CloudWatch to publish alerts
+resource "aws_sns_topic_policy" "billing_alert_policy" {
+  arn = aws_sns_topic.billing_alert.arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { "Service" = "cloudwatch.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.billing_alert.arn
+      },
+      {
+        Effect    = "Allow"
+        Principal = { "AWS" = "*" }
+        Action    = "sns:Subscribe"
+        Resource  = aws_sns_topic.billing_alert.arn
+        Condition = {
+          StringEquals = {
+            "sns:Protocol" = "email"
+          }
+        }
+      }
+    ]
+  })
 }
 
 # SNS Dead-Letter Queue (DLQ) for failed notifications
@@ -59,12 +88,36 @@ resource "aws_sqs_queue" "sns_dlq" {
   name                        = "${var.sns_topic_name}-dlq"
   message_retention_seconds   = 1209600 # 14 days
   visibility_timeout_seconds  = 300
+  
+  tags = {
+    Environment = var.environment_tag
+    Purpose     = "BillingAlertsDLQ"
+  }
+}
+
+# SQS Queue Policy to allow SNS to send messages to DLQ
+resource "aws_sqs_queue_policy" "sns_dlq_policy" {
+  queue_url = aws_sqs_queue.sns_dlq.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { "Service" = "sns.amazonaws.com" }
+        Action    = ["sqs:SendMessage"]
+        Resource  = aws_sqs_queue.sns_dlq.arn
+      }
+    ]
+  })
 }
 
 resource "aws_sns_topic_subscription" "sns_dlq_subscription" {
   topic_arn = aws_sns_topic.billing_alert.arn
   protocol  = "sqs"
   endpoint  = aws_sqs_queue.sns_dlq.arn
+  
+  depends_on = [aws_sqs_queue_policy.sns_dlq_policy]
 }
 
 # CloudWatch Billing Alarms (Total)
@@ -92,6 +145,8 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
     Purpose     = "BillingAlerts"
     Threshold   = "${var.alert_thresholds[count.index]}"
   }
+  
+  depends_on = [aws_sns_topic_policy.billing_alert_policy]
 }
 
 # Billing Alerts per AWS Service
@@ -121,6 +176,8 @@ resource "aws_cloudwatch_metric_alarm" "service_billing_alert" {
     Service     = "AmazonEC2"
     Threshold   = "${var.alert_thresholds[count.index]}"
   }
+  
+  depends_on = [aws_sns_topic_policy.billing_alert_policy]
 }
 
 # Add multiple email subscriptions to SNS topic
@@ -148,28 +205,3 @@ resource "aws_cloudwatch_log_metric_filter" "billing_logs" {
   }
 }
 
-# Outputs for easier management and monitoring
-output "sns_topic_arn" {
-  description = "The ARN of the SNS topic for billing alerts"
-  value       = aws_sns_topic.billing_alert.arn
-}
-
-output "cloudwatch_alarm_names" {
-  description = "List of CloudWatch alarm names for total charges"
-  value       = [for alarm in aws_cloudwatch_metric_alarm.estimated_charges : alarm.alarm_name]
-}
-
-output "service_alarm_names" {
-  description = "List of CloudWatch alarm names for EC2 service charges"
-  value       = [for alarm in aws_cloudwatch_metric_alarm.service_billing_alert : alarm.alarm_name]
-}
-
-output "sns_dlq_arn" {
-  description = "The ARN of the SNS dead-letter queue"
-  value       = aws_sqs_queue.sns_dlq.arn
-}
-
-output "email_subscription_count" {
-  description = "Number of email subscriptions configured"
-  value       = length(var.email_endpoints)
-}

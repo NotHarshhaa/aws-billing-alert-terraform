@@ -33,13 +33,17 @@ Welcome to the **AWS Billing Alert Terraform module!** This module helps you set
 
 ---
 
-## 🚀 New Features & Improvements [07-03-2025]
+## 🚀 Latest Features & Security Improvements [2025]
 
-✅ **Multiple Email Alerts** – Supports multiple recipients by allowing a list of emails.  
-✅ **SNS Dead-Letter Queue (DLQ)** – Ensures failed notifications are retried.  
-✅ **Per-Service Billing Alerts** – Monitors spending on individual AWS services like EC2, S3, etc.  
-✅ **Enhanced CloudWatch Filters** – Improved billing log monitoring for better cost visibility.  
-✅ **CloudWatch Dashboard** – Provides an overview of billing trends and cost insights.  
+✅ **Enhanced Security** – Added proper SNS and SQS policies for secure communication  
+✅ **Fixed DLQ Integration** – Dead-letter queue now properly handles failed notifications  
+✅ **Resource Dependencies** – Proper dependency management for reliable deployment  
+✅ **Multiple Email Alerts** – Supports multiple recipients by allowing a list of emails  
+✅ **Per-Service Billing Alerts** – Monitors spending on individual AWS services like EC2  
+✅ **Enhanced CloudWatch Filters** – Improved billing log monitoring for better cost visibility  
+✅ **OK Actions** – Sends recovery notifications when charges return to normal  
+✅ **Better Code Organization** – Separated outputs and versions for maintainability  
+✅ **Configuration Summary** – Enhanced outputs for better monitoring and debugging  
 
 ---
 
@@ -95,24 +99,25 @@ terraform init
 
 #### Update Configuration Variables:  
 
-With the recent changes, you can now: 
-
-- Set custom **AWS regions** using `aws_region`.  
-- Configure **currencies** for billing alerts.  
-- Automatically confirm **email subscriptions** for ease of setup during testing.  
-- Configure **per-service billing alerts** to track costs for specific AWS services.  
-- Enable **SNS DLQ** for better message reliability.  
-- Visualize billing trends via the **CloudWatch Dashboard**.  
-
-Update the `terraform.tfvars` file with your settings:  
+Configure your billing alerts using the provided `terraform.tfvars.example` file:  
 
 ```hcl  
+# Copy terraform.tfvars.example to terraform.tfvars and customize
 aws_region            = "us-east-1"  
 alert_thresholds      = [100, 150, 200]  
 currency              = "USD"  
 email_endpoints       = ["your-email@example.com", "team@example.com"]  
-auto_confirm_subscription = true  
+environment_tag       = "Production"  
+auto_confirm_subscription = false  
+sns_topic_name        = "billing-alert"  
 ```  
+
+**Key Features:**  
+- 🔒 **Secure by Default** – Proper IAM policies and access controls  
+- 📧 **Multiple Recipients** – Send alerts to multiple email addresses  
+- 🔄 **Reliable Delivery** – DLQ handles failed notifications automatically  
+- 📊 **Service Monitoring** – Separate alerts for total and EC2-specific charges  
+- ✅ **Recovery Notifications** – Get alerts when charges return to normal  
 
 #### Apply the Configuration:  
 
@@ -122,38 +127,9 @@ terraform apply
 
 ---
 
-## 🔧 Customization  
-
-### Billing Thresholds  
-
-Modify the `alert_thresholds` in your variables file to configure additional thresholds for your billing alerts:  
-
-```hcl  
-alert_thresholds = [100, 150, 200, 250]  
-```  
-
-### Email Subscription Auto-Confirmation  
-
-For testing purposes, you can enable automatic email confirmation by setting:  
-
-```hcl  
-auto_confirm_subscription = true  
-```  
-
-> [!IMPORTANT]  
-> **Use this option only in test environments with proper permissions.**  
-
----
-
-## 📬 Notifications  
-
-This module supports email alerts via **AWS SNS**. Update the `email_endpoints` variable with your preferred email addresses to receive billing notifications.  
-
----
-
 ## 📝 Example Usage  
 
-Here’s an example configuration:  
+Here's an example configuration:  
 
 ```hcl  
 module "billing_alert" {  
@@ -161,20 +137,97 @@ module "billing_alert" {
   aws_region                 = "us-west-2"  
   alert_thresholds           = [100, 150, 200]  
   email_endpoints            = ["my-email@example.com", "finance@example.com"]  
-  auto_confirm_subscription  = true  
+  auto_confirm_subscription  = false  
   currency                   = "USD"  
+  environment_tag            = "Production"  
+  sns_topic_name             = "billing-alert"  
 }  
+```  
+
+### 📊 Module Outputs  
+
+After deployment, you'll get these useful outputs:  
+
+```hcl  
+# SNS topic for monitoring  
+output "sns_topic_arn"  
+
+# List of all alarm names  
+output "cloudwatch_alarm_names"  
+output "service_alarm_names"  
+
+# DLQ for troubleshooting  
+output "sns_dlq_arn"  
+
+# Configuration summary  
+output "configuration_summary"  
 ```  
 
 ---
 
 ## 🎯 Usage  
 
-This module is flexible and supports dynamic region, currency, and threshold configurations. Customize the `alert.tf` file as needed and reapply the configuration using `terraform apply`.  
+This module is designed for **simplicity and reliability**:  
+
+1. **Quick Setup** – Copy `terraform.tfvars.example` to `terraform.tfvars`  
+2. **Configure Emails** – Add your email addresses to `email_endpoints`  
+3. **Set Thresholds** – Adjust `alert_thresholds` based on your budget  
+4. **Deploy** – Run `terraform apply`  
+5. **Monitor** – Receive alerts when charges exceed your thresholds  
+
+### 🔧 Advanced Configuration  
+
+The module supports these customizations:  
+- **Multiple thresholds** – Get alerts at different spending levels  
+- **Service-specific monitoring** – EC2 service charges tracked separately  
+- **Custom regions and currencies** – Deploy anywhere with local currency  
+- **Environment tagging** – Organize resources by environment  
+
+### 🛡️ Security Features  
+
+- **Least Privilege Access** – Only necessary permissions granted  
+- **Secure Communication** – Proper SNS and SQS policies  
+- **Resource Isolation** – Clear separation of concerns  
+- **No Hardcoded Secrets** – All configuration via variables  
 
 ---
 
-## 🙌 Feedback and Contributions
+## � Customization
+
+### Billing Thresholds
+
+Modify the `alert_thresholds` in your `terraform.tfvars` file to configure additional thresholds:
+
+```hcl
+alert_thresholds = [100, 150, 200, 250]
+```
+
+### Email Subscription Auto-Confirmation
+
+For testing purposes, you can enable automatic email confirmation by setting:
+
+```hcl
+auto_confirm_subscription = true
+```
+
+> [!IMPORTANT]
+> **Use this option only in test environments with proper permissions.**
+
+### Supported Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `aws_region` | AWS region for deployment | `us-east-1` | No |
+| `alert_thresholds` | Billing thresholds in USD | `[100, 120]` | No |
+| `email_endpoints` | Email addresses for alerts | `['your-email@example.com']` | Yes |
+| `currency` | Billing currency | `USD` | No |
+| `environment_tag` | Environment tag for resources | `Production` | No |
+| `auto_confirm_subscription` | Auto-confirm email subs | `false` | No |
+| `sns_topic_name` | SNS topic name | `billing-alert` | No |
+
+---
+
+## �🙌 Feedback and Contributions
 
 > [!TIP]  
 > _We'd love to hear your thoughts! Whether it's feedback, bug reports, or pull requests, feel free to get involved. Your contributions help make this module better for everyone._
