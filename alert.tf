@@ -56,7 +56,9 @@ resource "aws_sns_topic" "billing_alert" {
 
 # SNS Dead-Letter Queue (DLQ) for failed notifications
 resource "aws_sqs_queue" "sns_dlq" {
-  name = "${var.sns_topic_name}-dlq"
+  name                        = "${var.sns_topic_name}-dlq"
+  message_retention_seconds   = 1209600 # 14 days
+  visibility_timeout_seconds  = 300
 }
 
 resource "aws_sns_topic_subscription" "sns_dlq_subscription" {
@@ -65,7 +67,7 @@ resource "aws_sns_topic_subscription" "sns_dlq_subscription" {
   endpoint  = aws_sqs_queue.sns_dlq.arn
 }
 
-# CloudWatch Billing Alarms (Per-Service and Total)
+# CloudWatch Billing Alarms (Total)
 resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   count               = length(var.alert_thresholds)
   alarm_name          = "estimated-charges-${var.alert_thresholds[count.index]}"
@@ -78,20 +80,24 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   threshold           = var.alert_thresholds[count.index]
   alarm_description   = "Alarm when AWS charges exceed ${var.alert_thresholds[count.index]} ${var.currency}"
   alarm_actions       = [aws_sns_topic.billing_alert.arn]
+  ok_actions          = [aws_sns_topic.billing_alert.arn]
   treat_missing_data  = "notBreaching"
+  
   dimensions = {
     Currency = var.currency
   }
+  
   tags = {
     Environment = var.environment_tag
     Purpose     = "BillingAlerts"
+    Threshold   = "${var.alert_thresholds[count.index]}"
   }
 }
 
 # Billing Alerts per AWS Service
 resource "aws_cloudwatch_metric_alarm" "service_billing_alert" {
   count               = length(var.alert_thresholds)
-  alarm_name          = "service-billing-alert-${var.alert_thresholds[count.index]}"
+  alarm_name          = "service-billing-alert-AmazonEC2-${var.alert_thresholds[count.index]}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
   metric_name         = "EstimatedCharges"
@@ -99,16 +105,21 @@ resource "aws_cloudwatch_metric_alarm" "service_billing_alert" {
   period              = "86400"
   statistic           = "Maximum"
   threshold           = var.alert_thresholds[count.index]
-  alarm_description   = "Alarm when AWS service-specific charges exceed ${var.alert_thresholds[count.index]} ${var.currency}"
+  alarm_description   = "Alarm when AmazonEC2 charges exceed ${var.alert_thresholds[count.index]} ${var.currency}"
   alarm_actions       = [aws_sns_topic.billing_alert.arn]
+  ok_actions          = [aws_sns_topic.billing_alert.arn]
   treat_missing_data  = "notBreaching"
+  
   dimensions = {
     ServiceName = "AmazonEC2"
     Currency    = var.currency
   }
+  
   tags = {
     Environment = var.environment_tag
     Purpose     = "BillingAlerts"
+    Service     = "AmazonEC2"
+    Threshold   = "${var.alert_thresholds[count.index]}"
   }
 }
 
@@ -130,6 +141,11 @@ resource "aws_cloudwatch_log_metric_filter" "billing_logs" {
     namespace = "AWS/Billing"
     value     = "$.EstimatedCharges"
   }
+  
+  tags = {
+    Environment = var.environment_tag
+    Purpose     = "BillingFilter"
+  }
 }
 
 # Outputs for easier management and monitoring
@@ -139,11 +155,21 @@ output "sns_topic_arn" {
 }
 
 output "cloudwatch_alarm_names" {
-  description = "List of CloudWatch alarm names"
+  description = "List of CloudWatch alarm names for total charges"
   value       = [for alarm in aws_cloudwatch_metric_alarm.estimated_charges : alarm.alarm_name]
+}
+
+output "service_alarm_names" {
+  description = "List of CloudWatch alarm names for EC2 service charges"
+  value       = [for alarm in aws_cloudwatch_metric_alarm.service_billing_alert : alarm.alarm_name]
 }
 
 output "sns_dlq_arn" {
   description = "The ARN of the SNS dead-letter queue"
   value       = aws_sqs_queue.sns_dlq.arn
+}
+
+output "email_subscription_count" {
+  description = "Number of email subscriptions configured"
+  value       = length(var.email_endpoints)
 }
