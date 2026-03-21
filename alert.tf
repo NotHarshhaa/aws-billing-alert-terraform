@@ -63,12 +63,14 @@ resource "aws_sns_topic_policy" "billing_alert_policy" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid       = "CloudWatchPublish"
         Effect    = "Allow"
         Principal = { "Service" = "cloudwatch.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.billing_alert.arn
       },
       {
+        Sid       = "EmailSubscribe"
         Effect    = "Allow"
         Principal = { "AWS" = "*" }
         Action    = "sns:Subscribe"
@@ -188,20 +190,28 @@ resource "aws_sns_topic_subscription" "email_alerts" {
   endpoint  = var.email_endpoints[count.index]
 }
 
-# CloudWatch Log Metric Filter for Billing Logs
-resource "aws_cloudwatch_log_metric_filter" "billing_logs" {
-  name           = "EstimatedChargesFilter"
-  log_group_name = "/aws/billing"
-  pattern        = "{ $.EstimatedCharges > 0 }"
-  metric_transformation {
-    name      = "EstimatedChargesMetric"
-    namespace = "AWS/Billing"
-    value     = "$.EstimatedCharges"
-  }
+# CloudWatch Log Group for Billing Logs
+resource "aws_cloudwatch_log_group" "billing_logs" {
+  name              = "/aws/billing"
+  retention_in_days = 14
   
   tags = {
     Environment = var.environment_tag
-    Purpose     = "BillingFilter"
+    Purpose     = "BillingLogs"
   }
+}
+
+# CloudWatch Log Metric Filter for Billing Logs
+resource "aws_cloudwatch_log_metric_filter" "billing_logs" {
+  name           = "EstimatedChargesFilter"
+  log_group_name = aws_cloudwatch_log_group.billing_logs.name
+  pattern        = "{ $.EstimatedCharges > 0 }"
+  metric_transformation {
+    name      = "EstimatedChargesMetric"
+    namespace = "CustomBilling"
+    value     = "$.EstimatedCharges"
+  }
+  
+  depends_on = [aws_cloudwatch_log_group.billing_logs]
 }
 
